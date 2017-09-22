@@ -8,33 +8,57 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <pthread.h> 
 
 #define MAXIN 20
 #define MAXOUT 20
 
-char *getreq(char *inbuf, int len) {
-  /* Get request char stream */
-  printf("REQ: ");              /* prompt */
-  memset(inbuf,0,len);          /* clear for good measure */
-  return fgets(inbuf,len,stdin); /* read up to a EOL */
+struct packet{
+  int sockfd;
+};
+
+void *send_t(void *p) {
+  char sndbuf[MAXIN];/* Get request char stream */
+  printf("IN sender\n");
+  struct packet *p1 = (struct packet *)p;
+  while(1)
+  { 
+    scanf("%s",sndbuf);
+    write(p1->sockfd, sndbuf, strlen(sndbuf)); /* send */
+  }
+}
+void *receive_t(void *p) {
+   int n;
+  char rcvbuf[MAXOUT];/* Get request char stream */
+  printf("IN receiver\n");
+  struct packet *p1 = (struct packet *)p;
+  while(1)
+  {
+    memset(rcvbuf,0,MAXOUT);               /* clear */
+    n=read(p1->sockfd, rcvbuf, MAXOUT-1);      /* receive */
+    if(n>0)
+    {
+      printf("Recvd msg from sender:%s\n", rcvbuf);
+      //write(STDOUT_FILENO, rcvbuf, n);        /* echo */
+    }
+  }
 }
 
 void client(int sockfd) {
-  int n;
-  char sndbuf[MAXIN]; char rcvbuf[MAXOUT];
-  getreq(sndbuf, MAXIN);        /* prompt */
-  //while (strlen(sndbuf) > 0) {
-    write(sockfd, sndbuf, strlen(sndbuf)); /* send */
-  //}
-    //printf("Wrote message: %s\n",sndbuf);
+  char rcvbuf[MAXOUT];
+  pthread_t tid_send,tid_receive;
+
+   struct packet *p_r = (struct packet*)malloc(sizeof(struct packet));
+   p_r->sockfd = sockfd;
+   int r_r = pthread_create(&tid_receive, NULL,&send_t,p_r);
+  
+    struct packet *p_s = (struct packet*)malloc(sizeof(struct packet));
+    p_s->sockfd = sockfd;
+    int r_s = pthread_create(&tid_send, NULL,&receive_t,p_s);
+
    while(1){ 
-    memset(rcvbuf,0,MAXOUT);               /* clear */
-    n=read(sockfd, rcvbuf, MAXOUT-1);      /* receive */
-   // printf("Received reply: %d",n);
-    
-    write(STDOUT_FILENO, rcvbuf, n);	      /* echo */
-    //getreq(sndbuf, MAXIN);                 /* prompt */
-  }
+
+   }
 }
 
 // Server address
