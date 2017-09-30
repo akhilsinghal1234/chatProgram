@@ -9,8 +9,8 @@
 #include <string.h>
 #include <arpa/inet.h>
 
-#define MAXIN 20000
-#define MAXOUT 20000
+#define MAXIN 20
+#define MAXOUT 20
 
 char* readFileBytes(FILE *fl)  
 {  
@@ -32,13 +32,16 @@ char *getreq(char *inbuf, int len) {
 }
 
 void client(int sockfd,FILE *fp) {
-  int n;
+  int n,i=0;
   char sndbuf[MAXIN]; char rcvbuf[MAXOUT];
   strcpy(sndbuf,readFileBytes(fp));        /* prompt */
-  printf("sending msg:%s\n", sndbuf);
-  if (strlen(sndbuf) > 0) {
-    write(sockfd, sndbuf, strlen(sndbuf)); /* send */
-
+  int len = strlen(sndbuf);
+  printf("sending msg:%s %d\n", sndbuf,len);
+  
+  while(i <= len) {
+    //sndbuf+=2
+    printf("%d bytes are written\n",write(sockfd, sndbuf + i , 2)); /* send */
+    i=i+2;
     //printf("Wrote message: %s\n",sndbuf);
     
     // memset(rcvbuf,0,MAXOUT);               /* clear */
@@ -68,7 +71,7 @@ int main() {
 	struct sockaddr_in serv_addr;
 
   char filename[50];
-  printf("Please enter file name to be send !");
+  printf("Please enter file name to be send !\n");
 	scanf("%s",filename);
   FILE *fp;
   fp = fopen(filename,"r");

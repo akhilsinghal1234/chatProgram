@@ -10,8 +10,8 @@
 #include <arpa/inet.h>
 #include <pthread.h> 
 
-#define MAXIN 20
-#define MAXOUT 20
+#define MAXIN 22
+#define MAXOUT 22
 
 struct packet{
   int sockfd;
@@ -19,7 +19,6 @@ struct packet{
 
 void *send_t(void *p) {
   char sndbuf[MAXIN];/* Get request char stream */
-  printf("IN sender\n");
   struct packet *p1 = (struct packet *)p;
   while(1)
   { 
@@ -30,15 +29,14 @@ void *send_t(void *p) {
 void *receive_t(void *p) {
    int n;
   char rcvbuf[MAXOUT];/* Get request char stream */
-  printf("IN receiver\n");
-  struct packet *p1 = (struct packet *)p;
+ struct packet *p1 = (struct packet *)p;
   while(1)
   {
     memset(rcvbuf,0,MAXOUT);               /* clear */
     n=read(p1->sockfd, rcvbuf, MAXOUT-1);      /* receive */
     if(n>0)
     {
-      printf("Recvd msg from sender:%s\n", rcvbuf);
+      printf("%s\n", rcvbuf);
       //write(STDOUT_FILENO, rcvbuf, n);        /* echo */
     }
   }

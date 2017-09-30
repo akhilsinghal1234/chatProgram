@@ -57,7 +57,7 @@ void client(int sockfd) {
     int r_s = pthread_create(&tid_send, NULL,&receive_t,p_s);
 
    while(1){ 
-
+    
    }
 }
 

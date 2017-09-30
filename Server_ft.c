@@ -6,8 +6,8 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <fcntl.h>
-#define MAXREQ 20000
-#define MAXQUEUE 50000
+#define MAXREQ 20
+#define MAXQUEUE 50
 
 void server(int consockfd) {
   char reqbuf[MAXREQ];
@@ -17,9 +17,12 @@ void server(int consockfd) {
   while (1) {                   
     memset(reqbuf,0, MAXREQ);
     n = read(consockfd,reqbuf,MAXREQ-1); /* Recv */
+    
+    if (n > 0)
+    {
     printf("Recvd msg:%s\n", reqbuf);
-    if (n <= 0) return;
-    n = write(filedesc, reqbuf, strlen(reqbuf)); /* echo*/
+     write(filedesc, reqbuf, strlen(reqbuf)); /* echo*/
+    }
   }
 }
 
