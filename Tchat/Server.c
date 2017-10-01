@@ -7,22 +7,28 @@
 #include <string.h>
 #include <pthread.h> 
 #include <time.h>
+#include <signal.h>
 
-#define MAXREQ 22
+#define MAXREQ 100
 #define MAXQUEUE 5
-
-int chat_counter=0;
-
+#define maxperson 100
 
 struct packet{
   int consockfd_1;
   int consockfd_2;
+  int* status;
 };
 
 struct consockfd_s{
 	int consockfd;//unique id for chat 
 	int status;//1 for chating 0 for free
 };
+
+int chat_counter=0;
+
+
+
+
 
 // A utility function to swap to integers
 void swap (int *a, int *b)
@@ -49,46 +55,45 @@ void randomize ( int arr[], int n )
         swap(&arr[i], &arr[j]);
     }
 }
-void * send_t(void *p){
+void * client1(void *p){
  int n;
   struct packet *p1 = (struct packet *)p;
   char reqbuf[MAXREQ];
-  char Info[50];
-  strcpy(Info,"Random Person:");
   while(1)
   {  
     memset(reqbuf,0, MAXREQ);
     n = read(p1->consockfd_2,reqbuf,MAXREQ-1); /* Recv */
-    strcpy(Info,"Random Person:");
-    strcat(Info,reqbuf);
-    if(n>0)
-      {
-      	write(p1->consockfd_1,Info,strlen(Info));
-      }
+    printf("value of n :: %d\n",n );
+    write(p1->consockfd_1,reqbuf,strlen(reqbuf));
+    if(n <=0){
+    	*(p1->status) = 2;
+    	return NULL; 
+    }
   }
 }
-void * receive_t(void *p){
+void * client2(void *p){
   int n;
   struct packet *p1 = (struct packet *)p;
   char reqbuf[MAXREQ];
-    char Info[50];
-  strcpy(Info,"Random Person:");
+ 
   while(1)
   {  
     memset(reqbuf,0, MAXREQ);
     n = read(p1->consockfd_1,reqbuf,MAXREQ-1); /* Recv */
-    strcpy(Info,"Random Person:");
-    strcat(Info,reqbuf);
-    if(n>0)
-      {
-      	write(p1->consockfd_2,Info,strlen(Info));
-      }
+    printf("value of n :: %d\n",n );
+    write(p1->consockfd_2,reqbuf,strlen(reqbuf));
+    if(n <=0){
+    	*(p1->status) = 1;
+    	return NULL;
+    }
+    
   }
 }
 void server(int consockfd_1,int consockfd_2) {
  char welcomemsg[MAXREQ];
+ int status = 0;
   pthread_t tid_send,tid_receive;
-  strcpy(welcomemsg,"You are Now connected");
+  strcpy(welcomemsg,"You are Now connected\n");
   write(consockfd_1,welcomemsg,strlen(welcomemsg));
   write(consockfd_2,welcomemsg,strlen(welcomemsg));
   if(1) {                   
@@ -96,16 +101,34 @@ void server(int consockfd_1,int consockfd_2) {
     struct packet *p_r = (struct packet*)malloc(sizeof(struct packet));
     p_r->consockfd_1 = consockfd_1;
     p_r->consockfd_2 = consockfd_2;
-    int r_r = pthread_create(&tid_receive, NULL,&receive_t,p_r);
+    p_r->status = &status;
+    int r_r = pthread_create(&tid_receive, NULL,&client2,p_r);
     
     //send    
     struct packet *p_s = (struct packet*)malloc(sizeof(struct packet));
     p_s->consockfd_1 = consockfd_1;
     p_s->consockfd_2 = consockfd_2;
-    int r_s = pthread_create(&tid_send, NULL,&send_t,p_s);
-    while(1){
+    p_s->status = &status;
+    int r_s = pthread_create(&tid_send, NULL,&client1,p_s);
+    
+    while(status == 0);
 
-    }
+    pthread_kill(tid_receive,0);
+    pthread_kill(tid_send,0);
+
+   	if(status == 1){
+   		printf("close 1\n");
+   		write(consockfd_2, "#404", 4);
+   		close(consockfd_1);
+   	}
+   	else{
+   		printf("close 2\n");
+   		write(consockfd_1, "#404", 4);
+   		close(consockfd_2);
+   	}
+    
+    printf("Connection lost for pair !\n");
+    pthread_exit(0);
 
    }
 }
@@ -143,6 +166,7 @@ void randomPair(struct consockfd_s  consock_array[],int count_person){
 	    anuk++;
 	}
 	free(random_array);
+	
 	anuk=0;
 }
 int main() {

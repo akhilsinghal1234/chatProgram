@@ -9,9 +9,11 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <pthread.h> 
+#include <signal.h>
 
-#define MAXIN 22
-#define MAXOUT 22
+#define MAXIN 100
+#define MAXOUT 100
+#define ERROR "#404"
 
 struct packet{
   int sockfd;
@@ -22,23 +24,36 @@ void *send_t(void *p) {
   struct packet *p1 = (struct packet *)p;
   while(1)
   { 
-    scanf("%s",sndbuf);
+  	memset(sndbuf,0,MAXIN);
+    fgets(sndbuf,MAXIN,stdin);
     write(p1->sockfd, sndbuf, strlen(sndbuf)); /* send */
   }
 }
 void *receive_t(void *p) {
    int n;
   char rcvbuf[MAXOUT];/* Get request char stream */
+  char Info[50];
+  strcpy(Info,"Random Person:");
  struct packet *p1 = (struct packet *)p;
   while(1)
   {
     memset(rcvbuf,0,MAXOUT);               /* clear */
     n=read(p1->sockfd, rcvbuf, MAXOUT-1);      /* receive */
+
+  	if(!strcmp(rcvbuf, ERROR))
+    	return NULL;
+    
     if(n>0)
     {
-      printf("%s\n", rcvbuf);
+      strcpy(Info,"Random Person:");
+      strcat(Info,rcvbuf);
+      printf("%s",Info);
+      fflush(stdout);
       //write(STDOUT_FILENO, rcvbuf, n);        /* echo */
     }
+    else
+    	return NULL;
+
   }
 }
 
@@ -48,15 +63,16 @@ void client(int sockfd) {
 
    struct packet *p_r = (struct packet*)malloc(sizeof(struct packet));
    p_r->sockfd = sockfd;
-   int r_r = pthread_create(&tid_receive, NULL,&send_t,p_r);
+   int r_r = pthread_create(&tid_send, NULL,&send_t,p_r);
   
     struct packet *p_s = (struct packet*)malloc(sizeof(struct packet));
     p_s->sockfd = sockfd;
-    int r_s = pthread_create(&tid_send, NULL,&receive_t,p_s);
+    int r_s = pthread_create(&tid_receive, NULL,&receive_t,p_s);
 
-   while(1){ 
+   pthread_join(tid_receive,NULL);
+   pthread_kill(tid_send,0);
 
-   }
+   printf("Finding Other Person For You...\n");
 }
 
 // Server address
@@ -72,22 +88,26 @@ struct hostent *buildServerAddr(struct sockaddr_in *serv_addr,
 
 int main() {
 	//Client protocol
-	char *serverIP = "10.8.1.3";
-	int sockfd, portno = 5033;
-	struct sockaddr_in serv_addr;
+	char *serverIP = "10.8.12.48";
+	int sockfd, portno = 5033;	struct sockaddr_in serv_addr;
 	
 	buildServerAddr(&serv_addr, serverIP, portno);
 
 	/* Create a TCP socket */
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
+	while(1){
 	/* Connect to server on port */
 	if(!connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)))
+	  {
 	   printf("Connected to %s:%d\n",serverIP, portno);
+	   client(sockfd);
+	  }
 
 	/* Carry out Client-Server protocol */
-	client(sockfd);
+	
 
+	}
 	/* Clean up on termination */
 	close(sockfd);
 }
