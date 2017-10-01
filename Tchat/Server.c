@@ -59,6 +59,7 @@ void * send_t(void *p){
   {  
     memset(reqbuf,0, MAXREQ);
     n = read(p1->consockfd_2,reqbuf,MAXREQ-1); /* Recv */
+    strcpy(Info,"Random Person:");
     strcat(Info,reqbuf);
     if(n>0)
       {
@@ -76,6 +77,7 @@ void * receive_t(void *p){
   {  
     memset(reqbuf,0, MAXREQ);
     n = read(p1->consockfd_1,reqbuf,MAXREQ-1); /* Recv */
+    strcpy(Info,"Random Person:");
     strcat(Info,reqbuf);
     if(n>0)
       {

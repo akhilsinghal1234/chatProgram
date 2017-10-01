@@ -72,7 +72,7 @@ struct hostent *buildServerAddr(struct sockaddr_in *serv_addr,
 
 int main() {
 	//Client protocol
-	char *serverIP = "10.8.12.48";
+	char *serverIP = "10.8.1.3";
 	int sockfd, portno = 5033;
 	struct sockaddr_in serv_addr;
 	
