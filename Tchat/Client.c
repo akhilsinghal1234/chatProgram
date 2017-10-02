@@ -14,6 +14,9 @@
 #define MAXIN 100
 #define MAXOUT 100
 #define ERROR "#404"
+#define NEXT "#405"
+
+int sockfd;
 
 struct packet{
   int sockfd;
@@ -55,7 +58,7 @@ void *receive_t(void *p) {
   }
 }
 
-void client(int sockfd) {
+void client() {
   char rcvbuf[MAXOUT];
   pthread_t tid_send,tid_receive;
 
@@ -70,7 +73,7 @@ void client(int sockfd) {
    pthread_join(tid_receive,NULL);
    pthread_cancel(tid_send);
    printf("Finding Other Person For You...\n");
-   client(sockfd);
+   client();
 }
 
 // Server address
@@ -83,23 +86,33 @@ struct hostent *buildServerAddr(struct sockaddr_in *serv_addr,
   serv_addr->sin_port = htons(portno);
  }
 
+void sigintHandler(int sig_num)
+{
+    /* Reset handler to catch SIGINT next time.
+       Refer http://en.cppreference.com/w/c/program/signal */
+    signal(SIGTSTP, sigintHandler);
+    write(sockfd, NEXT, strlen(NEXT));
+    printf("\n Searching For another Mate ...\n");
+
+    fflush(stdout);
+}
 
 int main() {
 	//Client protocol
 	char *serverIP = "10.8.12.48";
-	int sockfd, portno = 5033;	struct sockaddr_in serv_addr;
+	int  portno = 5033;	struct sockaddr_in serv_addr;
 	
 	buildServerAddr(&serv_addr, serverIP, portno);
 
 	/* Create a TCP socket */
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
+	signal(SIGTSTP, sigintHandler);
 	
 	/* Connect to server on port */
 	while(!connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)))
 	  {
 	   printf("Connected to %s:%d\n",serverIP, portno);
-	   client(sockfd);
+	   client();
 	  }
 	 while(1);
 

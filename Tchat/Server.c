@@ -12,6 +12,8 @@
 #define MAXREQ 100
 #define MAXQUEUE 5
 #define maxperson 100
+#define ERROR "#404"
+#define NEXT "#405"
 
 struct pair{
   int client1;
@@ -71,6 +73,10 @@ void * client1(void *p){
   {  
     memset(reqbuf,0, MAXREQ);
     n = read(p1->consockfd_2,reqbuf,MAXREQ-1); /* Recv */
+    if(!strcmp(reqbuf,NEXT)){
+    	*(p1->status) = 3;
+    	return NULL; 
+    }
     write(p1->consockfd_1,reqbuf,strlen(reqbuf));
     if(n <=0){
     	*(p1->status) = 2;
@@ -87,6 +93,10 @@ void * client2(void *p){
   {  
     memset(reqbuf,0, MAXREQ);
     n = read(p1->consockfd_1,reqbuf,MAXREQ-1); /* Recv */
+    if(!strcmp(reqbuf,NEXT)){
+    	*(p1->status) = 4;
+    	return NULL; 
+    }
    write(p1->consockfd_2,reqbuf,strlen(reqbuf));
     if(n <=0){
     	*(p1->status) = 1;
@@ -126,19 +136,31 @@ void server(int client_1,int client_2,struct consockfd_s consock_array[]) {
 
    	if(status == 1){
    		printf("closed %d\n",client_1);
-   		write(consockfd_2, "#404", 4);
+   		write(consockfd_2, ERROR, 4);
    		printf("Enabling client %d for another chat\n",client_2);
    		consock_array[client_2].status = 0;
    		consock_array[client_1].status = 2;//2 means gone foreever
    		close(consockfd_1);
    	}
-   	else{
+   	else if (status == 2){
    		printf("closed %d\n",client_2);
-   		write(consockfd_1, "#404", 4);
+   		write(consockfd_1, ERROR, 4);
    		printf("Enabling client %d for another chat\n",client_1);
    		consock_array[client_1].status = 0;
    		consock_array[client_2].status = 2;//2 means offline
    		close(consockfd_2);
+   	}
+   	else if(status == 3){
+   		printf("Enabling client %d %d for some another chat\n",client_1,client_2);
+   		write(consockfd_1, ERROR, 4);
+   		consock_array[client_1].status = 0;
+   		consock_array[client_2].status = 0;
+   	}
+   	else{
+   		printf("Enabling client %d %d for some another chat\n",client_1,client_2);
+   		write(consockfd_2, ERROR, 4);
+   		consock_array[client_1].status = 0;
+   		consock_array[client_2].status = 0;
    	}
     printf("**************************************\n");
     printf("Index\tconsock_array index \t status \n");
