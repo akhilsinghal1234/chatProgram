@@ -13,6 +13,13 @@
 #define MAXQUEUE 5
 #define maxperson 100
 
+struct pair{
+  int client1;
+  int client2;
+  struct consockfd_s *consock_array;
+  int* status;
+};
+
 struct packet{
   int consockfd_1;
   int consockfd_2;
@@ -25,7 +32,8 @@ struct consockfd_s{
 };
 
 int chat_counter=0;
-
+struct consockfd_s consock_array[100];
+int count_person = 0;
 
 
 
@@ -63,7 +71,6 @@ void * client1(void *p){
   {  
     memset(reqbuf,0, MAXREQ);
     n = read(p1->consockfd_2,reqbuf,MAXREQ-1); /* Recv */
-    printf("value of n :: %d\n",n );
     write(p1->consockfd_1,reqbuf,strlen(reqbuf));
     if(n <=0){
     	*(p1->status) = 2;
@@ -80,8 +87,7 @@ void * client2(void *p){
   {  
     memset(reqbuf,0, MAXREQ);
     n = read(p1->consockfd_1,reqbuf,MAXREQ-1); /* Recv */
-    printf("value of n :: %d\n",n );
-    write(p1->consockfd_2,reqbuf,strlen(reqbuf));
+   write(p1->consockfd_2,reqbuf,strlen(reqbuf));
     if(n <=0){
     	*(p1->status) = 1;
     	return NULL;
@@ -89,11 +95,13 @@ void * client2(void *p){
     
   }
 }
-void server(int consockfd_1,int consockfd_2) {
+void server(int client_1,int client_2,struct consockfd_s consock_array[]) {
  char welcomemsg[MAXREQ];
  int status = 0;
   pthread_t tid_send,tid_receive;
-  strcpy(welcomemsg,"You are Now connected\n");
+  int consockfd_1 = consock_array[client_1].consockfd;
+  int consockfd_2 = consock_array[client_2].consockfd;
+  strcpy(welcomemsg,"is now connected\n");
   write(consockfd_1,welcomemsg,strlen(welcomemsg));
   write(consockfd_2,welcomemsg,strlen(welcomemsg));
   if(1) {                   
@@ -113,69 +121,96 @@ void server(int consockfd_1,int consockfd_2) {
     
     while(status == 0);
 
-    pthread_kill(tid_receive,0);
-    pthread_kill(tid_send,0);
+    pthread_cancel(tid_receive);
+    pthread_cancel(tid_send);
 
    	if(status == 1){
-   		printf("close 1\n");
+   		printf("closed %d\n",client_1);
    		write(consockfd_2, "#404", 4);
+   		printf("Enabling client %d for another chat\n",client_2);
+   		consock_array[client_2].status = 0;
+   		consock_array[client_1].status = 2;//2 means gone foreever
    		close(consockfd_1);
    	}
    	else{
-   		printf("close 2\n");
+   		printf("closed %d\n",client_2);
    		write(consockfd_1, "#404", 4);
+   		printf("Enabling client %d for another chat\n",client_1);
+   		consock_array[client_1].status = 0;
+   		consock_array[client_2].status = 2;//2 means offline
    		close(consockfd_2);
    	}
-    
-    printf("Connection lost for pair !\n");
+    printf("**************************************\n");
+    printf("Index\tconsock_array index \t status \n");
+    for (int i = 0; i < count_person; ++i)
+    {
+    	printf("%d\t\t\t%d\t\t\t%d\n",i,consock_array[i].consockfd,consock_array[i].status);
+    }
+    //printf("Connection lost for pair !\n");
     pthread_exit(0);
 
    }
 }
 void * server_helper(void *p){
-	struct packet *p1 = (struct packet *)p;
-	server(p1->consockfd_1,p1->consockfd_2);
+	struct pair *p1 = (struct pair *)p;
+	server(p1->client1,p1->client2,p1->consock_array);
 }
-int anuk=0;
-void randomPair(struct consockfd_s  consock_array[],int count_person){
-	int i,j,jk=0;
-	pthread_t tid[100];
-	int *random_array = (int*) malloc(100* sizeof(int));
-	//to-do
-	//from 0  to count person, check status and allot 
-	for (int i = 0; i < count_person; ++i)
+
+void * randomPair(){
+	while(1)
 	{
-		if(consock_array[i].status==0){
-			random_array[jk]=i;
-			jk++;
+		int start_index,last_index,free_person=0,middle;
+		int inc=0;
+		pthread_t tid[100];
+		int *random_array = (int*) malloc(100* sizeof(int));
+		//to-do
+		//from 0  to count person, check status and allot 
+		for (int i = 0; i < count_person; ++i)
+		{
+			if(consock_array[i].status==0){
+				random_array[free_person]=i;
+				free_person++;
+			}
 		}
+		randomize(random_array,free_person);
+		start_index=0;
+		last_index=free_person-1;
+		if(free_person%2==0)
+			{
+				middle  = (free_person)/2 ;
+			}
+		else
+			{
+				middle = (free_person)/2 ;
+			}
+
+		while(free_person >= 2 && inc < middle  )
+		{
+
+			struct pair *p = (struct pair*)malloc(sizeof(struct pair));
+		    p->client1 = random_array[start_index + inc];
+		    consock_array[random_array[start_index + inc]].status=1;
+		    p->client2 = random_array[last_index-inc];
+		    consock_array[random_array[last_index-inc]].status=1;
+		    p->consock_array = consock_array;
+		    printf("Paring :: %d %d\n",random_array[start_index + inc],random_array[last_index-inc]);
+		    int r_s = pthread_create(&tid[chat_counter], NULL,&server_helper,p);
+		    chat_counter++;
+		    inc++;
+		}
+		free(random_array);
+		
+		inc=0;
 	}
-	randomize(random_array,jk);
-	i=0;
-	j=jk;
-	while(anuk < (jk)/2.0 && jk >= 2)
-	{
-		struct packet *p = (struct packet*)malloc(sizeof(struct packet));
-	    p->consockfd_1 = consock_array[random_array[i+anuk]].consockfd;
-	    consock_array[random_array[i+anuk]].status=1;
-	    p->consockfd_2 = consock_array[random_array[j-anuk-1]].consockfd;
-	    consock_array[random_array[j-anuk-1]].status=1;
-	    printf("Paring :: %d %d\n",random_array[i+anuk],random_array[j-anuk-1]);
-	    int r_s = pthread_create(&tid[chat_counter], NULL,&server_helper,p);
-	    chat_counter++;
-	    anuk++;
-	}
-	free(random_array);
-	
-	anuk=0;
 }
+
+
 int main() {
 
 int lstnsockfd, consockfd, clilen, portno = 5033;
 struct sockaddr_in serv_addr, cli_addr;
-struct consockfd_s consock_array[100];
-int count_person = 0;
 
+pthread_t tid_random;
  memset((char *) &serv_addr,0, sizeof(serv_addr));
  serv_addr.sin_family      = AF_INET;
  serv_addr.sin_addr.s_addr = INADDR_ANY;
@@ -188,6 +223,12 @@ lstnsockfd = socket(AF_INET, SOCK_STREAM, 0);
 /* Bind socket to port */
 bind(lstnsockfd, (struct sockaddr *)&serv_addr,sizeof(serv_addr));
 printf("Bounded to port\n");
+
+
+int randomprocess_thread = pthread_create(&tid_random, NULL,&randomPair,NULL);
+if(randomprocess_thread < 0)
+	printf("Failed to create randomizing pairing thread! \n");
+
 while (count_person!=100) {
    printf("Listening for incoming connections\n");
 
@@ -207,9 +248,9 @@ while (count_person!=100) {
    	  count_person++;
    }
 
+   	
    
-   
-  randomPair(consock_array,count_person);
+  
 
   // close(consockfd);
   }

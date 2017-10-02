@@ -40,7 +40,7 @@ void *receive_t(void *p) {
     memset(rcvbuf,0,MAXOUT);               /* clear */
     n=read(p1->sockfd, rcvbuf, MAXOUT-1);      /* receive */
 
-  	if(!strcmp(rcvbuf, ERROR))
+  	if(!strcmp(rcvbuf, ERROR)) // if person disconnects close connections
     	return NULL;
     
     if(n>0)
@@ -49,10 +49,8 @@ void *receive_t(void *p) {
       strcat(Info,rcvbuf);
       printf("%s",Info);
       fflush(stdout);
-      //write(STDOUT_FILENO, rcvbuf, n);        /* echo */
     }
-    else
-    	return NULL;
+   
 
   }
 }
@@ -70,9 +68,9 @@ void client(int sockfd) {
     int r_s = pthread_create(&tid_receive, NULL,&receive_t,p_s);
 
    pthread_join(tid_receive,NULL);
-   pthread_kill(tid_send,0);
-
+   pthread_cancel(tid_send);
    printf("Finding Other Person For You...\n");
+   client(sockfd);
 }
 
 // Server address
@@ -96,18 +94,20 @@ int main() {
 	/* Create a TCP socket */
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
-	while(1){
+	
 	/* Connect to server on port */
-	if(!connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)))
+	while(!connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)))
 	  {
 	   printf("Connected to %s:%d\n",serverIP, portno);
 	   client(sockfd);
 	  }
+	 while(1);
 
+	 //DO change singnal cntl + C cntl + D
+	  //printf("IN loop !\n");
 	/* Carry out Client-Server protocol */
+	   
 	
-
-	}
 	/* Clean up on termination */
 	close(sockfd);
 }
