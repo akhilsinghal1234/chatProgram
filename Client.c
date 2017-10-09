@@ -9,6 +9,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <pthread.h> 
+#include <semaphore.h>
 
 #define MAXIN 20
 #define MAXOUT 20
@@ -16,6 +17,9 @@
 struct packet{
   int sockfd;
 };
+
+sem_t semvar;
+
 
 void *send_t(void *p) {
   char sndbuf[MAXIN];/* Get request char stream */
@@ -38,7 +42,9 @@ void *receive_t(void *p) {
     n=read(p1->sockfd, rcvbuf, MAXOUT-1);      /* receive */
     if(n>0)
     {
+      sem_wait(&semvar);
       printf("Recvd msg from sender:%s\n", rcvbuf);
+      sem_post(&semvar);
       //write(STDOUT_FILENO, rcvbuf, n);        /* echo */
     }
   }
@@ -77,8 +83,11 @@ int main() {
 	char *serverIP = "10.8.12.48";
 	int sockfd, portno = 5033;
 	struct sockaddr_in serv_addr;
-	
+	sem_init(&semvar, 0, 1);
 	buildServerAddr(&serv_addr, serverIP, portno);
+//semaphore intialization
+
+
 
 	/* Create a TCP socket */
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);

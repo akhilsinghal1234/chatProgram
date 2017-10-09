@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <pthread.h> 
+#include <semaphore.h>
 
 #define MAXREQ 20
 #define MAXQUEUE 5
@@ -13,6 +14,8 @@
 struct packet{
   int consockfd;
 };
+
+sem_t semvar;
 
 void * send_t(void *p){
   char sendbuf[MAXREQ];
@@ -34,7 +37,11 @@ void * receive_t(void *p){
     memset(reqbuf,0, MAXREQ);
     n = read(p1->consockfd,reqbuf,MAXREQ-1); /* Recv */
     if(n>0)
+    {
+      sem_wait(&semvar);
       printf("Recvd msg from sender:%s\n", reqbuf);
+      sem_post(&semvar);
+    }
     // else 
     //   printf("ERROR\n");
   }
@@ -69,6 +76,7 @@ struct sockaddr_in serv_addr, cli_addr;
  serv_addr.sin_family      = AF_INET;
  serv_addr.sin_addr.s_addr = INADDR_ANY;
  serv_addr.sin_port        = htons(portno);
+sem_init(&semvar, 0, 1);
 
 // Server protocol
 /* Create Socket to receive requests*/

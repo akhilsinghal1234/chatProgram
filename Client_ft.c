@@ -11,6 +11,7 @@
 
 #define MAXIN 20
 #define MAXOUT 20
+#define PACKETSIZE 15
 
 char* readFileBytes(FILE *fl)  
 {  
@@ -40,8 +41,8 @@ void client(int sockfd,FILE *fp) {
   
   while(i <= len) {
     //sndbuf+=2
-    printf("%d bytes are written\n",write(sockfd, sndbuf + i , 2)); /* send */
-    i=i+2;
+    printf("%d bytes are written\n",write(sockfd, sndbuf + i ,PACKETSIZE)); /* send */
+    i=i+PACKETSIZE;
     //printf("Wrote message: %s\n",sndbuf);
     
     // memset(rcvbuf,0,MAXOUT);               /* clear */
@@ -83,11 +84,14 @@ int main() {
 
 	/* Connect to server on port */
 	if(!connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)))
-	   printf("Connected to %s:%d\n",serverIP, portno);
+	   {
+      printf("Connected to %s:%d\n",serverIP, portno);
+      client(sockfd,fp);
+    }
   else
      printf("Not connected !"); 
 	/* Carry out Client-Server protocol */
-	client(sockfd,fp);
+	
 
 	/* Clean up on termination */
 	close(sockfd);
